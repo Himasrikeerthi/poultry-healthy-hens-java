@@ -2,6 +2,6 @@ FROM tomcat:latest
 
 RUN rm -f /usr/local/tomcat/webapps/*
 
-COPY target/*.war /usr/local/tomcat/webapps/
+COPY target/*.war /usr/local/tomcat/webapps/Root.war
 
 EXPOSE 8080
