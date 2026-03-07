@@ -1,4 +1,4 @@
-FROM tomcat:9
+FROM tomcat:latest
 
 RUN rm -f /usr/local/tomcat/webapps/*
 
