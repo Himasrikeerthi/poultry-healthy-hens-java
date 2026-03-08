@@ -1,34 +1,52 @@
 pipeline {
     agent any
 
+    environment {
+        DOCKER_IMAGE = "himasrikeerthi/poultryfarm:latest"
+        DOCKER_CREDENTIALS = credentials('Hima_Docker_Hub')
+    }
+
     stages {
 
         stage('Checkout Code') {
             steps {
-                checkout scmGit(branches: [[name: '*/main']], extensions: [], userRemoteConfigs: [[credentialsId: 'HimGIt', url: 'https://github.com/Himasrikeerthi/poultry-healthy-hens-java.git']])
+                git branch: 'main', url: 'https://github.com/Himasrikeerthi/poultry-healthy-hens-java.git'
             }
         }
 
         stage('Build WAR') {
             steps {
-                sh 'mvn clean package'
+                sh 'mvn clean package -DskipTests'
             }
         }
 
-        stage('Docker Build') {
+        stage('Build Docker Image') {
             steps {
-                sh 'docker build -t healthy-hens:latest .'
+                sh "docker build -t ${DOCKER_IMAGE} ."
             }
         }
 
-        stage('Run Container') {
+        stage('Push Docker Image') {
             steps {
-                sh '''
-                docker rm -f healthy-hens || true
-                docker run -d -p 2000:8080 --name healthy-hens healthy-hens:latest
-                '''
+                withDockerRegistry([credentialsId: 'Hima_Docker_Hub', url: 'https://index.docker.io/v1/']) {
+                    sh "docker push ${DOCKER_IMAGE}"
+                }
             }
         }
 
+        stage('Deploy Container') {
+            steps {
+                sh """
+                docker rm -f poultryfarm || true
+                docker run -d --name poultryfarm -p 2001:8080 ${DOCKER_IMAGE}
+                """
+            }
+        }
+    }
+
+    post {
+        always {
+            cleanWs()
+        }
     }
 }
