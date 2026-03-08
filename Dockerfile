@@ -2,7 +2,7 @@ FROM tomcat:latest
 
 RUN rm -f /usr/local/tomcat/webapps/*
 
-COPY target/*.war /usr/local/tomcat/webapps/ROOT.war
+COPY target/healthy-hens-1.1.war /usr/local/tomcat/webapps/ROOT.war
 
 EXPOSE 80
 
