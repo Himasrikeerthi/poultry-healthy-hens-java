@@ -2,51 +2,72 @@ pipeline {
     agent any
 
     environment {
-        DOCKER_IMAGE = "himasrikeerthi/poultryfarm:latest"
-        DOCKER_CREDENTIALS = credentials('Hima_Docker_Hub')
+        IMAGE_NAME = 'himasrikeerthi/poultry-app'
+        TAG = 'latest'
     }
 
     stages {
 
-        stage('Checkout Code') {
+        stage('Clone Code') {
             steps {
+                deleteDir()
                 git branch: 'main', url: 'https://github.com/Himasrikeerthi/poultry-healthy-hens-java.git'
             }
         }
 
-        stage('Build WAR') {
+        stage('Build Maven Project') {
             steps {
-                sh 'mvn clean package -DskipTests'
+                sh 'mvn clean install'
             }
         }
 
         stage('Build Docker Image') {
             steps {
-                sh "docker build -t ${DOCKER_IMAGE} ."
+                sh 'docker build -t $IMAGE_NAME:$TAG .'
             }
         }
 
         stage('Push Docker Image') {
             steps {
-                withDockerRegistry([credentialsId: 'Hima_Docker_Hub', url: 'https://index.docker.io/v1/']) {
-                    sh "docker push ${DOCKER_IMAGE}"
+                withCredentials([usernamePassword(
+                    credentialsId: 'docker-creds',
+                    usernameVariable: 'DOCKER_USER',
+                    passwordVariable: 'DOCKER_PASS'
+                )]) {
+                    sh '''
+                    echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin
+                    docker push $IMAGE_NAME:$TAG
+                    '''
                 }
             }
         }
 
-        stage('Deploy Container') {
+        stage('Check Files') {
             steps {
-                sh """
-                docker rm -f poultryfarm || true
-                docker run -d --name poultryfarm -p 2001:8080 ${DOCKER_IMAGE}
-                """
+                sh 'pwd'
+                sh 'ls -l'
+                sh 'ls -l k8s || true'
+            }
+        }
+
+        stage('Deploy to Kubernetes') {
+            steps {
+                sh '''
+                aws eks --region ap-south-1 update-kubeconfig --name mycluster
+
+                kubectl apply -f deployment.yml --validate=false || kubectl apply -f k8s/deployment.yml --validate=false
+                kubectl apply -f service.yml --validate=false || kubectl apply -f k8s/service.yml --validate=false
+                '''
             }
         }
     }
 
     post {
-        always {
-            cleanWs()
+        success {
+            echo 'Pipeline executed successfully '
+        }
+        failure {
+            echo 'Pipeline failed '
         }
     }
 }
