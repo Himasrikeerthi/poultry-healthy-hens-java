@@ -38,7 +38,7 @@ pipeline {
 
         stage('Deploy to Kubernetes') {
             steps {
-                sh 'kubectl apply -f poultry-deploy-service.yml'
+                sh 'kubectl apply -f poultry.yml'
             }
         }
     }
