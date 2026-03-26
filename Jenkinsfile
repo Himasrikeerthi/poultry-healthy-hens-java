@@ -39,25 +39,27 @@ pipeline {
         }
 
         stage('Deploy to Kubernetes') {
-            steps {
-                sh '''
-                set -e
-                set -x
+    steps {
+        sh '''
+        set -e
+        set -x
 
-                echo "Setting kubeconfig..."
-                export KUBECONFIG=/var/lib/jenkins/.kube/config
+        echo "Configuring AWS access..."
+        aws sts get-caller-identity
 
-                echo "Checking cluster access..."
-                kubectl get nodes
+        echo "Updating kubeconfig..."
+        aws eks --region ap-south-1 update-kubeconfig --name mycluster
 
-                echo "Deploying application..."
-                kubectl apply -f poultry-deploy-service.yml
+        echo "Checking cluster access..."
+        kubectl get nodes
 
-                echo "Verifying deployment..."
-                kubectl get pods
-                kubectl get svc
-                '''
-            }
+        echo "Deploying application..."
+        kubectl apply -f poultry-deploy-service.yml
+
+        echo "Verifying deployment..."
+        kubectl get pods
+        kubectl get svc
+        '''}
         }
     }
 
